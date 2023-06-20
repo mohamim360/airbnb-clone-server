@@ -26,6 +26,23 @@ const userDoc = await User.create({
   res.json(userDoc);
 })
 
+app.post('/login',async (req,res)=>{
+  const {email ,password} = req.body;
+  const userDoc = await User.findOne({email});
+  if(userDoc){
+   const pass =  bcrypt.compareSync(password,userDoc.password)
+   if(pass){
+    res.json('login success')
+   }else{
+    res.json('login failed')
+   }
+  }
+  else{
+    res.json('user not found');
+  }
+ 
+})
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
