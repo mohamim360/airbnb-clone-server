@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { default: mongoose } = require("mongoose");
+const { mongoose } = require("mongoose");
 const User = require("./models/User");
 const cookieParser = require("cookie-parser");
 
@@ -15,8 +15,11 @@ const port = process.env.PORT || 5000;
 require("dotenv").config();
 app.use(express.json());
 app.use(
-  cors()
+  cors(  {  credentials: true,
+    origin: 'http://localhost:5173',})
 );
+app.options("/login", cors());
+
 app.use(cookieParser());
 
 mongoose.connect(process.env.MONGO_URL);
@@ -64,8 +67,10 @@ app.post("/login", async (req, res) => {
   }
 });
 
+//profile 
+
 app.get("/profile", (req, res) => {
-  const {token }= req.cookies;
+   const {token} = req.cookies
   
   if (token) {
     jwt.verify(token, jwtSecret, {}, async (err, userInfo) => {
@@ -77,7 +82,15 @@ app.get("/profile", (req, res) => {
   } else {
     res.json(null);
   }
-});
+}); 
+
+//logout
+
+app.post('/logout',(req,res)=>{
+  res.cookie('token','').json(true);
+})
+
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
