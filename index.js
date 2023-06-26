@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { mongoose } = require("mongoose");
 const User = require("./models/User");
+const Place = require('./models/Place')
 const cookieParser = require("cookie-parser");
 const imageDownloader = require("image-downloader");
 const multer = require("multer");
@@ -120,6 +121,43 @@ app.post("/upload", photoMiddleware.array("photos", 100), (req, res) => {
   }
   res.json(uploadFiles);
 });
+
+
+//places 
+app.post('/places', (req,res)=> {
+  const { token } = req.cookies;
+
+  const {
+      title,
+      address,
+      addedPhotos,
+      description,
+      perks,
+      extraInfo,
+      checkIn,
+      checkOut,
+      maxGuests,
+  } = req.body;
+
+  jwt.verify(token, jwtSecret, {}, async (err, userInfo) => {
+    if (err) throw err;
+   const placeInfo = await Place.create({
+      owner:userInfo.id,
+      title,
+      address,
+      addedPhotos,
+      description,
+      perks,
+      extraInfo,
+      checkIn,
+      checkOut,
+      maxGuests,
+     })
+     res.json(placeInfo)
+  });
+   
+})
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
