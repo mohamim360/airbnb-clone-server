@@ -8,6 +8,7 @@ const imageDownloader = require("image-downloader");
 const multer = require("multer");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const Booking = require("./models/Booking");
 const fs = require("fs");
 const app = express();
 const bcryptSalt = bcrypt.genSaltSync(10);
@@ -16,12 +17,21 @@ const port = process.env.PORT || 5000;
 
 require("dotenv").config();
 app.use(express.json());
-app.use(cors({ credentials: true, origin: "http://localhost:5173" }));
+app.use(cors({ credentials: true, origin: "http://localhost:5174" }));
 app.use("/uploads", express.static(__dirname + "/uploads"));
 
 app.use(cookieParser());
 
 mongoose.connect(process.env.MONGO_URL);
+
+function userToken(req) {
+  return new Promise((resolve, reject) => {
+    jwt.verify(req.cookies.token, jwtSecret, {}, async (err, userInfo) => {
+      if(err) throw err;
+      resolve(userInfo);
+    });
+  });
+}
 
 app.get("/", (req, res) => {
   res.send("hello");
@@ -136,6 +146,7 @@ app.post("/places", (req, res) => {
     checkIn,
     checkOut,
     maxGuests,
+    price,
   } = req.body;
 
   jwt.verify(token, jwtSecret, {}, async (err, userInfo) => {
@@ -151,12 +162,13 @@ app.post("/places", (req, res) => {
       checkIn,
       checkOut,
       maxGuests,
+      price,
     });
     res.json(placeInfo);
   });
 });
 
-app.get("/places", (req, res) => {
+app.get("/user-places", (req, res) => {
   const { token } = req.cookies;
   jwt.verify(token, jwtSecret, {}, async (err, userInfo) => {
     const { id } = userInfo;
@@ -183,10 +195,11 @@ app.put("/places", async (req, res) => {
     checkIn,
     checkOut,
     maxGuests,
+    price,
   } = req.body;
 
   jwt.verify(token, jwtSecret, {}, async (err, userInfo) => {
-    if(err) throw err;
+    if (err) throw err;
     const placeDoc = await Place.findById(id);
     if (userInfo.id === placeDoc.owner.toString()) {
       placeDoc.set({
@@ -199,12 +212,55 @@ app.put("/places", async (req, res) => {
         checkIn,
         checkOut,
         maxGuests,
+        price,
       });
       await placeDoc.save();
-      res.json('ok')
+      res.json("ok");
     }
   });
 });
+
+//places--IndexPage
+
+app.get("/places", async (req, res) => {
+    
+  res.json(await Place.find());
+});
+
+//bookings
+
+app.post("/bookings", async (req, res) => {
+  const userInfo = await userToken(req)
+
+  const { place, checkIn, checkOut, numberOfGuests, name, phone, price, } =
+    req.body;
+
+  Booking.create({
+    place,
+    checkIn,
+    checkOut,
+    numberOfGuests,
+    name,
+    phone,
+    price,
+    user:userInfo.id,
+  })
+    .then((doc) => {
+      res.json(doc);
+    })
+    .catch((err) => {
+      throw err;
+    });
+});
+
+
+
+app.get("/bookings", async (req, res) => {
+  const userInfo = await userToken(req);
+  res.json(await Booking.find({user:userInfo.id}).populate('place'))
+});
+
+//listen
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
